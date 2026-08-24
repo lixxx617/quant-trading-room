@@ -38,6 +38,9 @@ def get_channel_access_token():
 
 
 def send_line_message(message: str, user_id: str = None) -> bool:
+	"""透過 LINE 官方帳號推播訊息 (Push Message)"""
+
+	# 若沒帶入 user_id，自動從 Streamlit session 抓取已綁定的用戶
 	if not user_id:
 		try:
 			import streamlit as st
@@ -46,28 +49,26 @@ def send_line_message(message: str, user_id: str = None) -> bool:
 			pass
 
 	if not user_id:
-		return "找不到 LINE User ID"
+		return "找不到 LINE User ID（請確認是否已登入/綁定）"
 
-		# 接下來維持你原本發送的程式碼...
+	token = get_channel_access_token()
+	if not token:
+		return "找不到 Channel Access Token（請檢查 secrets.toml）"
 
-		token = get_channel_access_token()
-		if not token:
-			print("⚠️ 找不到 Channel Access Token，請檢查 secrets.toml。")
-			return False
+	url = "https://api.line.me/v2/bot/message/push"
+	headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+	payload = {"to": user_id, "messages": [{"type": "text", "text": message}]}
 
-		url = "https://api.line.me/v2/bot/message/push"
-		headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-		payload = {"to": user_id, "messages": [{"type": "text", "text": message}]}
-
-		try:
-			res = requests.post(url, headers=headers, json=payload)
-			# 如果失敗，直接把 LINE 回傳的詳細原因印出來
-			if res.status_code != 200:
-				error_msg = f"LINE 拒絕發送 ({res.status_code}): {res.text}"
-				print(f"❌ {error_msg}")
-				return error_msg  # 改成回傳具體的錯誤字串
-			return True
-		except Exception as e:
-			error_msg = f"發送例外異常: {e}"
+	try:
+		res = requests.post(url, headers=headers, json=payload)
+		if res.status_code != 200:
+			error_msg = f"LINE 拒絕發送 ({res.status_code}): {res.text}"
 			print(f"❌ {error_msg}")
-			return error_msg
+			return error_msg  # 回傳詳細錯誤字串
+
+		return True  # 成功送達回傳 True
+
+	except Exception as e:
+		error_msg = f"發送例外異常: {e}"
+		print(f"❌ {error_msg}")
+		return error_msg
