@@ -125,8 +125,7 @@ if st.session_state.get("line_user_id"):
 		importlib.reload(notifier)
 
 	# 接收 send_line_message 回傳的結果（如果是 True 代表成功，如果是字串代表錯誤原因）
-	target_user_id = st.session_state.get("line_user_id")
-	result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！", user_id=target_user_id)
+	result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！")
 
 	if result is True:
 		st.sidebar.success("測試訊息已發送，請查看 LINE！")
