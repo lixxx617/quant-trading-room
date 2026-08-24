@@ -10,3 +10,10 @@ python-dotenv>=1.0    # config.py 讀取 .env（選用；沒裝也能跑，只�
 # 純命令列工作流程（generate_daily_signals.py / validate_strategy.py）不需要
 streamlit>=1.32
 plotly>=5.18
+streamlit
+pandas
+numpy
+feedparser
+requests
+supabase
+plotly
