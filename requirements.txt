@@ -11,3 +11,4 @@ feedparser
 requests
 supabase
 lightgbm
+openpyxl
