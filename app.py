@@ -437,7 +437,11 @@ for i, ticker in enumerate(active_tickers):
 
 				st.plotly_chart(fig, use_container_width=True)
 		# 6. AI 預測 (含判斷依據說明)
-		prob, msg = predict_future_signal(df)
+		try:
+			prob, msg = predict_future_signal(df)
+		except Exception as e:
+			prob, msg = None, f"模型預測發生異常"
+
 		if prob is not None:
 			st.markdown("### 🤖 AI 趨勢預測 (未來 5 天)")
 			col1, col2 = st.columns([1, 2])
