@@ -53,13 +53,11 @@ if st.sidebar.button("🔄 手動更新最新股價", use_container_width=True):
 	st.rerun()
 # --- 網頁載入時，優先檢查網址是否有 user_id，有的話自動恢復登入與 Supabase 資料 ---
 # 確保初始化 line_user_id (優先從網址列抓取，其次從 session，最後用強制的開發者測試 ID 保底)
+# 1. 嘗試從網址列或 session 恢復登入狀態（不使用任何寫死的假 ID）
 if "line_user_id" not in st.session_state:
 	query_user_id = st.query_params.get("user_id")
 	if query_user_id:
 		st.session_state["line_user_id"] = query_user_id
-	else:
-		# 💡 【保底設定】這裡直接寫死你的測試帳號 ID（如果有真實 LINE UID 可替換此處）
-		st.session_state["line_user_id"] = "forced_test_user_id"
 
 # 若已登入但 session 沒有持倉，自動從 Supabase 載入最新持倉資料
 if st.session_state.get("line_user_id") and "portfolio" not in st.session_state:
@@ -67,10 +65,6 @@ if st.session_state.get("line_user_id") and "portfolio" not in st.session_state:
 	user_data = db.get_user_data(uid)
 	if user_data:
 		st.session_state["portfolio"] = {"cash": float(user_data.get("cash", 100000.0)), "holdings": user_data.get("holdings", {})}
-	else:
-		# 如果 Supabase 沒有該測試帳號，自動建立一筆預設紀錄
-		db.save_or_update_user(uid, "開發測試用戶")
-		st.session_state["portfolio"] = {"cash": 100000.0, "holdings": {}}
 
 # ---- 💾 使用者資料與 Supabase 整合 ----
 current_user_id = st.session_state.get("line_user_id", "")
@@ -81,7 +75,7 @@ redirect_uri = st.secrets.get("LINE_REDIRECT_URI", "http://localhost:8501/")
 
 # 2. 處理 LINE Login 授權回傳的 code
 query_params = st.query_params
-if "code" in query_params and not current_user_id.startswith("forced_test_"):
+if "code" in query_params and not current_user_id:
 	auth_code = query_params["code"]
 
 	token_url = "https://api.line.me/oauth2/v2.1/token"
@@ -114,15 +108,15 @@ if "code" in query_params and not current_user_id.startswith("forced_test_"):
 			st.sidebar.success(f"🎉 歡迎，{user_name}！")
 			st.rerun()
 
-# 3. 側邊欄 LINE 綁定與通知介面 (改為永遠顯示，不再因重新整理而消失)
+# 3. 側邊欄 LINE 綁定與通知介面
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔔 LINE 官方帳號通知綁定")
 
-current_uid = st.session_state.get("line_user_id", "forced_test_user_id")
+# 檢查目前是不是真的有登入用戶
+current_uid = st.session_state.get("line_user_id", "")
 
 if current_uid:
-	st.session_state["line_user_id"] = current_uid
-	display_name = st.session_state.get("line_user_name", "已連結測試帳號")
+	display_name = st.session_state.get("line_user_name", "已綁定用戶")
 	st.sidebar.info(f"✅ 已連結 LINE 帳號：{display_name}")
 
 	# 🚀 發送測試通知按鈕
@@ -153,7 +147,6 @@ if current_uid:
 			if active_holdings:
 				success_count = 0
 				error_messages = []
-				target_user_id = st.session_state.get("line_user_id")
 
 				for ticker in active_holdings.keys():
 					df_temp = dd.fetch_stock_data(ticker)
@@ -168,7 +161,7 @@ if current_uid:
 							msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
 						msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
 
-						res = notifier.send_line_message(msg, user_id=target_user_id)
+						res = notifier.send_line_message(msg, user_id=current_uid)
 						if res is True:
 							success_count += 1
 						else:
@@ -192,6 +185,23 @@ if current_uid:
 			del st.query_params["code"]
 		st.session_state.clear()
 		st.rerun()
+
+else:
+	# 如果還沒登入，顯示 LINE 登入/加好友按鈕供每個使用者點擊
+	login_url = ("https://access.line.me/oauth2/v2.1/authorize?"
+	             f"response_type=code&client_id={client_id}"
+	             f"&redirect_uri={urllib.parse.quote(redirect_uri)}"
+	             "&state=quant_trading_state&scope=profile%20openid"
+	             "&bot_prompt=normal")
+
+	st.sidebar.markdown(f'''
+        <a href="{login_url}" target="_blank">
+            <button style="background-color:#06C755;color:white;border:none;padding:10px 16px;border-radius:8px;width:100%;font-weight:bold;cursor:pointer;">
+                💬 一鍵加好友綁定 LINE 通知
+            </button>
+        </a>
+    ''',
+	                    unsafe_allow_html=True)
 
 # -------------------------------------------------------------------
 # 🧰 資產與持倉編輯器（優化介面與成本欄位）
