@@ -63,7 +63,11 @@ def send_line_message(message: str, user_id: str = None) -> bool:
 
 	try:
 		res = requests.post(url, headers=headers, json=payload)
-		return res.status_code == 200
+		# 如果失敗，印出 LINE 回傳的詳細文字
+		if res.status_code != 200:
+			print(f"❌ LINE API 拒絕發送，狀態碼：{res.status_code}，原因：{res.text}")
+			return False
+		return True
 	except Exception as e:
-		print(f"發送 LINE 訊息異常: {e}")
+		print(f"發送 LINE 訊息異常：{e}")
 		return False
