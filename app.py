@@ -34,7 +34,7 @@ now_tw = datetime.now(tw_tz)
 
 is_weekday = now_tw.weekday() < 5  # 0~4 代表週一至週五
 market_open = time(9, 0)
-market_close = time(13, 30)
+market_close = time(13, 30)authorize
 is_market_hours = is_weekday and (market_open <= now_tw.time() <= market_close)
 
 if is_market_hours:
@@ -128,7 +128,7 @@ if st.session_state.get("line_user_id"):
 		if success:
 			st.sidebar.success("測試訊息已發送，請查看 LINE💬")
 		else:
-			st.sidebar.error("發送失敗，請確認 secrets.toml 設定。")
+			st.sidebar.error("發送失敗！請檢查 LINE Token 是否正確、是否有加機器人好友，或 User ID 是否對應正確。")
 
 	# 📊 發送個人持倉戰報至 LINE
 	if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
