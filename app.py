@@ -117,16 +117,19 @@ if "code" in query_params and not current_user_id:
 			if user_record:
 				st.session_state["line_user_name"] = user_record.get("name", "已存取")
 				st.session_state["portfolio"] = {
-					"cash": float(user_record.get("cash", 100000.0)),
-					"holdings": user_record.get("holdings", {})
+				 "cash": float(user_record.get("cash", 100000.0)),
+				 "holdings": user_record.get("holdings", {})
 				}
 
 	# 2. 側邊欄 LINE 綁定與通知介面
 	st.sidebar.markdown("---")
 	st.sidebar.subheader("🔔 LINE 官方帳號通知綁定")
 
-	# 只要 session 裡面有 line_user_id，或是網址列有帶 user_id，按鈕就永遠會出現！
+	# 只要 session 裡面有 line_user_id，或是網址列有帶 user_id，按鈕就會永遠會出現！
 	current_uid = st.session_state.get("line_user_id") or url_user_id
+
+	# 【保底設定】如果因為重新整理抓不到，可以直接把你的 LINE User ID 填在這邊（記得保留引號）
+	# current_uid = current_uid or "你的真實LINE_USER_ID"
 
 	if current_uid:
 	# 確保 session 內也有值
