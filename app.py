@@ -120,15 +120,19 @@ if st.session_state.get("line_user_id"):
 	st.sidebar.info(f"✅ 已連結 LINE 帳號：\n{st.session_state.get('line_user_name', '已存取')}")
 
 	# 🚀 發送測試通知
-	if st.sidebar.button("🚀 發送測試通知", use_container_width=True):
-		import notifier
-		import importlib
+	if st.button("🚀 發送測試通知"):
+		notifier = importlib.import_module("notifier")
 		importlib.reload(notifier)
-		success = notifier.send_line_message("🎉 恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！")
-		if success:
-			st.sidebar.success("測試訊息已發送，請查看 LINE💬")
-		else:
-			st.sidebar.error(f"發送失敗：{result}")
+
+	# 接收 send_line_message 回傳的結果（如果是 True 代表成功，如果是字串代表錯誤原因）
+	current_user_id = st.session_state.get("line_user_id")
+	result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！")
+
+	if result is True:
+		st.sidebar.success("測試訊息已發送，請查看 LINE！")
+	else:
+		# 直接把 LINE 回傳的真實錯誤原因印在紅框裡！
+		st.sidebar.error(f"發送失敗：{result}")
 
 	# 📊 發送個人持倉戰報至 LINE
 	if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
