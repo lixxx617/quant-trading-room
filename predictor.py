@@ -58,6 +58,10 @@ def predict_future_signal(df):
 	X = clean_df[features]
 	y = clean_df["target"]
 
+	# 檢查目標類別是否單一（避免 LightGBM 崩潰）
+	if len(y.unique()) < 2:
+		return None, "訓練資料的漲跌目標類別不足（僅含單一方向）"
+
 	# 2. 訓練 LightGBM 模型
 	model = LGBMClassifier(n_estimators=50, learning_rate=0.05, max_depth=3, random_state=42, verbose=-1)
 	model.fit(X, y)
