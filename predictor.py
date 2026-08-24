@@ -26,18 +26,15 @@ def prepare_features(df):
 	rs = gain / (loss + 1e-9)
 	data["rsi_14"] = 100 - (100 / (1 + rs))
 
+
 def prepare_features(df):
 	data = df.copy()
-	# 計算未來 5 天報酬率
 	future_return = data["Close"].shift(-5) / data["Close"] - 1
-	# 計算近期滾動中位數作為基準
-	rolling_median = future_return.rolling(window=60, min_periods=10).median()
-
-	# 定義預測目標：未來 5 天報酬率是否大於近期中位數 (1為強於中位數, 0為弱於中位數)
+	rolling_median = future_return.rolling(window=20, min_periods=5).median()
 	data["target"] = (future_return > rolling_median).astype(int)
-
+	# 補齊空值，避免整張表被清空
+	data = data.bfill().ffill().fillna(0)
 	return data
-
 
 def predict_future_signal(df):
 	"""訓練模型並預測最新的上漲機率與詳細依據"""
