@@ -106,38 +106,49 @@ if "code" in query_params and not current_user_id:
 
 # 3. 如果已經登入，確保 Session 載入該使用者的最新資料
 # 確保每次重新整理時，能自動從網址列恢復 LINE 綁定狀態
-if "line_user_id" not in st.session_state:
+# 1. 強制檢查並從網址列永久還原 user_id（重新整理也不會不見）
 	query_params = st.query_params
-	if "user_id" in query_params:
-		user_id = query_params["user_id"]
-		# 從資料庫或紀錄中把該用戶的資料找回來並寫回 session
-		user_record = db.get_user_data(user_id)
-		if user_record:
-			st.session_state["line_user_id"] = user_id
-			st.session_state["line_user_name"] = user_record.get("name", "已存取")
-			st.session_state["portfolio"] = {"cash": float(user_record.get("cash", 100000.0)), "holdings": user_record.get("holdings", {})}
+	url_user_id = query_params.get("user_id")
 
-# ----- 3. 側邊欄 - LINE 官方帳號通知綁定介面 -----
-st.sidebar.markdown("---")
-st.sidebar.subheader("🔔 LINE 官方帳號通知綁定")
+	if url_user_id:
+		st.session_state["line_user_id"] = url_user_id
+		if "line_user_name" not in st.session_state:
+			user_record = db.get_user_data(url_user_id)
+			if user_record:
+				st.session_state["line_user_name"] = user_record.get("name", "已存取")
+				st.session_state["portfolio"] = {
+					"cash": float(user_record.get("cash", 100000.0)),
+					"holdings": user_record.get("holdings", {})
+				}
 
-if st.session_state.get("line_user_id"):
-	st.sidebar.info(f"✅ 已連結 LINE 帳號：\n{st.session_state.get('line_user_name', '已存取')}")
+	# 2. 側邊欄 LINE 綁定與通知介面
+	st.sidebar.markdown("---")
+	st.sidebar.subheader("🔔 LINE 官方帳號通知綁定")
 
-	# 🚀 發送測試通知
-	import notifier
-	import importlib
+	# 只要 session 裡面有 line_user_id，或是網址列有帶 user_id，按鈕就永遠會出現！
+	current_uid = st.session_state.get("line_user_id") or url_user_id
 
-	if st.sidebar.button("🚀 發送測試通知", use_container_width=True):
-		importlib.reload(notifier)
+	if current_uid:
+	# 確保 session 內也有值
+		st.session_state["line_user_id"] = current_uid
 
-		# 直接發送
-		result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！")
+		display_name = st.session_state.get("line_user_name", "已存取")
+		st.sidebar.info(f"✅ 已連結 LINE 帳號：{display_name}")
 
-		if result is True:
-			st.sidebar.success("測試訊息已發送，請查看 LINE 💬")
-		else:
-			st.sidebar.error(f"發送失敗：{result}")
+		# 🚀 發送測試通知按鈕
+		if st.sidebar.button("🚀 發送測試通知", use_container_width=True):
+			import notifier
+			import importlib
+			importlib.reload(notifier)
+
+			try:
+				result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！", user_id=current_uid)
+				if result is True:
+					st.sidebar.success("測試訊息已發送，請查看 LINE 💬")
+				else:
+					st.sidebar.error(f"發送失敗：{result}")
+			except Exception as e:
+				st.sidebar.error(f"發生例外錯誤：{e}")
 
 		# 📊 發送個人持倉戰報至 LINE
 		if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
