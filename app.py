@@ -176,7 +176,7 @@ else:
 	             "&bot_prompt=normal")
 
 	st.sidebar.markdown(f'''
-        <a href="{login_url}" target="_self">
+        <a href="{login_url}" target="_blank">
             <button style="background-color:#06C755;color:white;border:none;padding:10px 16px;border-radius:8px;width:100%;font-weight:bold;cursor:pointer;">
                 💬 一鍵加好友綁定 LINE 通知
             </button>
