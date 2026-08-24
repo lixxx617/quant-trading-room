@@ -1,0 +1,52 @@
+{
+    "cash": 5000.0,
+    "line_token": "D9sRTD2Vp55h8v9gppyY6ZAevqvin5v/wP2j4X09a8bEH6qELmEmaZ4EJNX2K99GBYAmITuOhZSJDL/4e4tV8CiusLAHRzk6sVPQy8FW5dN0EXnET/FQPg5hXGjnR/CkieXOMpFCKPUtLgo7MPoEcwdB04t89/1O/w1cDnyilFU=",
+    "line_user_id": "Uea288ef676b4241fd5e9db660a454c42",
+    "holdings": {
+        "2330.TW": {
+            "shares": 1,
+            "cost": 2321.0,
+            "total_cost": 2321.0
+        },
+        "2317.TW": {
+            "shares": 1,
+            "cost": 236.0,
+            "total_cost": 236.0
+        },
+        "2002.TW": {
+            "shares": 10,
+            "cost": 19.1,
+            "total_cost": 191.0
+        },
+        "00992A.TW": {
+            "shares": 20,
+            "cost": 17.6,
+            "total_cost": 352.0
+        },
+        "0056.TW": {
+            "shares": 11,
+            "cost": 52.81818181818182,
+            "total_cost": 581.0
+        },
+        "0050.TW": {
+            "shares": 5,
+            "cost": 103.8,
+            "total_cost": 519.0
+        },
+        "00646.TW": {
+            "shares": 1,
+            "cost": 76.0,
+            "total_cost": 76.0
+        },
+        "00981A.TW": {
+            "shares": 5,
+            "cost": 30.0,
+            "total_cost": 150.0
+        },
+        "00984A.TW": {
+            "shares": 3,
+            "cost": 15.333333333333334,
+            "total_cost": 46.0
+        }
+    }
+}

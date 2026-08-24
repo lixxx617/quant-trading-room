@@ -1,0 +1,7 @@
+# 忽略 Streamlit 機密設定檔，絕對不能上傳到 GitHub！
+.streamlit/secrets.toml
+
+# 忽略 Python 快取與暫存檔
+__pycache__/
+*.pyc
+.env
