@@ -105,12 +105,17 @@ if "code" in query_params and not current_user_id:
 			st.rerun()
 
 # 3. 如果已經登入，確保 Session 載入該使用者的最新資料
-if current_user_id and "portfolio" not in st.session_state:
-	user_record = db.get_user_data(current_user_id)
-	if user_record:
-		st.session_state["portfolio"] = {"cash": float(user_record.get("cash", 100000.0)), "holdings": user_record.get("holdings", {})}
-	else:
-		st.session_state["portfolio"] = {"cash": 100000.0, "holdings": {}}
+# 確保每次重新整理時，能自動從網址列恢復 LINE 綁定狀態
+if "line_user_id" not in st.session_state:
+	query_params = st.query_params
+	if "user_id" in query_params:
+		user_id = query_params["user_id"]
+		# 從資料庫或紀錄中把該用戶的資料找回來並寫回 session
+		user_record = db.get_user_data(user_id)
+		if user_record:
+			st.session_state["line_user_id"] = user_id
+			st.session_state["line_user_name"] = user_record.get("name", "已存取")
+			st.session_state["portfolio"] = {"cash": float(user_record.get("cash", 100000.0)), "holdings": user_record.get("holdings", {})}
 
 # ----- 3. 側邊欄 - LINE 官方帳號通知綁定介面 -----
 st.sidebar.markdown("---")
