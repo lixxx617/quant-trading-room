@@ -34,7 +34,7 @@ now_tw = datetime.now(tw_tz)
 
 is_weekday = now_tw.weekday() < 5  # 0~4 代表週一至週五
 market_open = time(9, 0)
-market_close = time(13, 30)authorize
+market_close = time(13, 30)
 is_market_hours = is_weekday and (market_open <= now_tw.time() <= market_close)
 
 if is_market_hours:
