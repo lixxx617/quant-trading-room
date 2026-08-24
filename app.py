@@ -128,7 +128,7 @@ if st.session_state.get("line_user_id"):
 		if success:
 			st.sidebar.success("測試訊息已發送，請查看 LINE💬")
 		else:
-			st.sidebar.error("發送失敗！請檢查 LINE Token 是否正確、是否有加機器人好友，或 User ID 是否對應正確。")
+			st.sidebar.error(f"發送失敗：{result}")
 
 	# 📊 發送個人持倉戰報至 LINE
 	if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
