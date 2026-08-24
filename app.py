@@ -440,7 +440,7 @@ for i, ticker in enumerate(active_tickers):
 		try:
 			prob, msg = predict_future_signal(df)
 		except Exception as e:
-			prob, msg = None, f"模型預測發生異常"
+			prob, msg = None, f"發生錯誤: {str(e)}"
 
 		if prob is not None:
 			st.markdown("### 🤖 AI 趨勢預測 (未來 5 天)")
