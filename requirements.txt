@@ -1,19 +1,13 @@
 # donchian_M20 台股量化交易系統 —— 套件需求
 # 安裝方式: pip install -r requirements.txt
 
+streamlit>=1.32
 pandas>=2.0
 numpy>=1.24
-yfinance>=0.2.40      # 線上下載台股歷史資料（generate_daily_signals.py / validate_strategy.py / app.py 皆需要）
-python-dotenv>=1.0    # config.py 讀取 .env（選用；沒裝也能跑，只是要自己export環境變數）
-
-# 以下兩個套件只有要跑 app.py（Streamlit儀表板）才需要，
-# 純命令列工作流程（generate_daily_signals.py / validate_strategy.py）不需要
-streamlit>=1.32
+yfinance>=0.2.40
+python-dotenv>=1.0
 plotly>=5.18
-streamlit
-pandas
-numpy
 feedparser
 requests
 supabase
-plotly
+lightgbm
