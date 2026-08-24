@@ -29,10 +29,22 @@ def prepare_features(df):
 
 def prepare_features(df):
 	data = df.copy()
+
+	# 確保欄位名稱統一轉為標準格式（首字母大寫），避免因為大小寫不同而讀不到
+	data.columns = [str(c).capitalize() for c in data.columns]
+
+	if "Close" not in data.columns:
+		return data  # 如果真的沒有 Close 欄位則直接返回
+
+	# 計算未來 5 天報酬率
 	future_return = data["Close"].shift(-5) / data["Close"] - 1
+	# 放寬滾動視窗與最小期數，適應較短的歷史數據
 	rolling_median = future_return.rolling(window=20, min_periods=5).median()
+
+	# 定義預測目標
 	data["target"] = (future_return > rolling_median).astype(int)
-	# 補齊空值，避免整張表被清空
+
+	# 自動補齊空值，避免整張表被 dropna() 清空
 	data = data.bfill().ffill().fillna(0)
 	return data
 
