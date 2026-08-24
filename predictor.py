@@ -26,8 +26,15 @@ def prepare_features(df):
 	rs = gain / (loss + 1e-9)
 	data["rsi_14"] = 100 - (100 / (1 + rs))
 
-	# 定義預測目標：未來 5 天收盤價是否高於今天（1為漲，0為跌/平）
-	data["target"] = (data["Close"].shift(-5) > data["Close"]).astype(int)
+def prepare_features(df):
+	data = df.copy()
+	# 計算未來 5 天報酬率
+	future_return = data["Close"].shift(-5) / data["Close"] - 1
+	# 計算近期滾動中位數作為基準
+	rolling_median = future_return.rolling(window=60, min_periods=10).median()
+
+	# 定義預測目標：未來 5 天報酬率是否大於近期中位數 (1為強於中位數, 0為弱於中位數)
+	data["target"] = (future_return > rolling_median).astype(int)
 
 	return data
 
