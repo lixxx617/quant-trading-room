@@ -139,29 +139,45 @@ if st.session_state.get("line_user_id"):
 			import notifier
 			import importlib
 			importlib.reload(notifier)
-			user_portfolio = st.session_state.get("portfolio", {})
-			active_holdings = user_portfolio.get("holdings", {})
 
-			if active_holdings:
-				success_count = 0
-				for ticker in active_holdings.keys():
-					df_temp = dd.fetch_stock_data(ticker)
-					if not df_temp.empty:
-						signal, price, desc = dd.calculate_signal(df_temp)
-						raw_info = active_holdings.get(ticker, {})
-						avg_cost = raw_info.get("cost", 0.0) if isinstance(raw_info, dict) else 0.0
+			try:
+				user_portfolio = st.session_state.get("portfolio", {})
+				active_holdings = user_portfolio.get("holdings", {})
 
-						msg = f"\n🔹 [{ticker}] 即時交易戰報\n◆ 當前股價: ${price:.1f}\n"
-						if avg_cost > 0:
-							pnl = (price - avg_cost) / avg_cost * 100
-							msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
-						msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
+				if active_holdings:
+					success_count = 0
+					error_messages = []
+					current_user_id = st.session_state.get("line_user_id")
 
-						if notifier.send_line_message(msg):
-							success_count += 1
-				st.sidebar.success(f"已成功發送 {success_count} 檔持倉戰報！")
-			else:
-				st.sidebar.warning("目前沒有持股股票！")
+					for ticker in active_holdings.keys():
+						df_temp = dd.fetch_stock_data(ticker)
+						if not df_temp.empty:
+							signal, price, desc = dd.calculate_signal(df_temp)
+							raw_info = active_holdings.get(ticker, {})
+							avg_cost = raw_info.get("cost", 0.0) if isinstance(raw_info, dict) else 0.0
+
+							msg = f"\n🔹 [{ticker}] 即時交易戰報\n◆ 當前股價: ${price:.1f}\n"
+							if avg_cost > 0:
+								pnl = (price - avg_cost) / avg_cost * 100
+								msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
+							msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
+
+							# 【修正點】明確傳入 user_id，並用 res == True 嚴格檢查是否成功
+							res = notifier.send_line_message(msg, user_id=current_user_id)
+							if res is True:
+								success_count += 1
+							else:
+								error_messages.append(f"{ticker}: {res}")
+
+					if success_count > 0:
+						st.sidebar.success(f"已成功發送 {success_count} 檔持倉戰報！")
+					if error_messages:
+						st.sidebar.error(f"發送失敗原因: {', '.join(error_messages)}")
+				else:
+					st.sidebar.warning("目前沒有持股股票！")
+
+			except Exception as e:
+				st.sidebar.error(f"發送戰報時發生例外錯誤：{e}")
 
 # 🔓 解除綁定 / 登出按鈕
 		if st.sidebar.button("🔓 解除綁定 / 登出", use_container_width=True):
