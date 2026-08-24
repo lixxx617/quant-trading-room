@@ -120,11 +120,13 @@ if st.session_state.get("line_user_id"):
 	st.sidebar.info(f"✅ 已連結 LINE 帳號：\n{st.session_state.get('line_user_name', '已存取')}")
 
 	# 🚀 發送測試通知
+	import notifier
+	import importlib
+
 	if st.sidebar.button("🚀 發送測試通知", use_container_width=True):
-		import notifier
 		importlib.reload(notifier)
 
-		# 乾淨呼叫，不帶任何會斷行的參數
+		# 直接發送
 		result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！")
 
 		if result is True:
@@ -132,43 +134,43 @@ if st.session_state.get("line_user_id"):
 		else:
 			st.sidebar.error(f"發送失敗：{result}")
 
-	# 📊 發送個人持倉戰報至 LINE
-	if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
-		import notifier
-		import importlib
-		importlib.reload(notifier)
-		user_portfolio = st.session_state.get("portfolio", {})
-		active_holdings = user_portfolio.get("holdings", {})
+		# 📊 發送個人持倉戰報至 LINE
+		if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
+			import notifier
+			import importlib
+			importlib.reload(notifier)
+			user_portfolio = st.session_state.get("portfolio", {})
+			active_holdings = user_portfolio.get("holdings", {})
 
-		if active_holdings:
-			success_count = 0
-			for ticker in active_holdings.keys():
-				df_temp = dd.fetch_stock_data(ticker)
-				if not df_temp.empty:
-					signal, price, desc = dd.calculate_signal(df_temp)
-					raw_info = active_holdings.get(ticker, {})
-					avg_cost = raw_info.get("cost", 0.0) if isinstance(raw_info, dict) else 0.0
+			if active_holdings:
+				success_count = 0
+				for ticker in active_holdings.keys():
+					df_temp = dd.fetch_stock_data(ticker)
+					if not df_temp.empty:
+						signal, price, desc = dd.calculate_signal(df_temp)
+						raw_info = active_holdings.get(ticker, {})
+						avg_cost = raw_info.get("cost", 0.0) if isinstance(raw_info, dict) else 0.0
 
-					msg = f"\n🔹 [{ticker}] 即時交易戰報\n◆ 當前股價: ${price:.1f}\n"
-					if avg_cost > 0:
-						pnl = (price - avg_cost) / avg_cost * 100
-						msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
-					msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
+						msg = f"\n🔹 [{ticker}] 即時交易戰報\n◆ 當前股價: ${price:.1f}\n"
+						if avg_cost > 0:
+							pnl = (price - avg_cost) / avg_cost * 100
+							msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
+						msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
 
-					if notifier.send_line_message(msg):
-						success_count += 1
-			st.sidebar.success(f"已成功發送 {success_count} 檔持倉戰報！")
-		else:
-			st.sidebar.warning("目前沒有持股股票！")
+						if notifier.send_line_message(msg):
+							success_count += 1
+				st.sidebar.success(f"已成功發送 {success_count} 檔持倉戰報！")
+			else:
+				st.sidebar.warning("目前沒有持股股票！")
 
-	# 🔓 解除綁定 / 登出按鈕
-	if st.sidebar.button("🔓 解除綁定 / 登出", use_container_width=True):
-		if "user_id" in st.query_params:
-			del st.query_params["user_id"]
-		if "code" in st.query_params:
-			del st.query_params["code"]
-		st.session_state.clear()
-		st.rerun()
+# 🔓 解除綁定 / 登出按鈕
+		if st.sidebar.button("🔓 解除綁定 / 登出", use_container_width=True):
+			if "user_id" in st.query_params:
+				del st.query_params["user_id"]
+			if "code" in st.query_params:
+				del st.query_params["code"]
+			st.session_state.clear()
+			st.rerun()
 
 else:
 	login_url = ("https://access.line.me/oauth2/v2.1/authorize?"
