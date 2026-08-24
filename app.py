@@ -52,26 +52,36 @@ if st.sidebar.button("🔄 手動更新最新股價", use_container_width=True):
 	st.cache_data.clear()
 	st.rerun()
 # --- 網頁載入時，優先檢查網址是否有 user_id，有的話自動恢復登入與 Supabase 資料 ---
+# 確保初始化 line_user_id (優先從網址列抓取，其次從 session，最後用強制的開發者測試 ID 保底)
 if "line_user_id" not in st.session_state:
 	query_user_id = st.query_params.get("user_id")
 	if query_user_id:
 		st.session_state["line_user_id"] = query_user_id
+	else:
+		# 💡 【保底設定】這裡直接寫死你的測試帳號 ID（如果有真實 LINE UID 可替換此處）
+		st.session_state["line_user_id"] = "forced_test_user_id"
 
 # 若已登入但 session 沒有持倉，自動從 Supabase 載入最新持倉資料
 if st.session_state.get("line_user_id") and "portfolio" not in st.session_state:
-	user_data = db.get_user_data(st.session_state["line_user_id"])
+	uid = st.session_state["line_user_id"]
+	user_data = db.get_user_data(uid)
 	if user_data:
 		st.session_state["portfolio"] = {"cash": float(user_data.get("cash", 100000.0)), "holdings": user_data.get("holdings", {})}
+	else:
+		# 如果 Supabase 沒有該測試帳號，自動建立一筆預設紀錄
+		db.save_or_update_user(uid, "開發測試用戶")
+		st.session_state["portfolio"] = {"cash": 100000.0, "holdings": {}}
+
 # ---- 💾 使用者資料與 Supabase 整合 ----
-# 1. 嘗試從 session 恢復狀態
 current_user_id = st.session_state.get("line_user_id", "")
 
 client_id = st.secrets.get("LINE_CLIENT_ID", "")
 client_secret = st.secrets.get("LINE_CLIENT_SECRET", "")
 redirect_uri = st.secrets.get("LINE_REDIRECT_URI", "http://localhost:8501/")
+
 # 2. 處理 LINE Login 授權回傳的 code
 query_params = st.query_params
-if "code" in query_params and not current_user_id:
+if "code" in query_params and not current_user_id.startswith("forced_test_"):
 	auth_code = query_params["code"]
 
 	token_url = "https://api.line.me/oauth2/v2.1/token"
@@ -93,7 +103,7 @@ if "code" in query_params and not current_user_id:
 			st.session_state["line_user_id"] = user_id
 			st.session_state["line_user_name"] = user_name
 			st.query_params["user_id"] = user_id
-			# 從 Supabase 查資料，若無紀錄則自動建立新用戶
+
 			user_record = db.get_user_data(user_id)
 			if not user_record:
 				db.save_or_update_user(user_id, user_name)
@@ -104,124 +114,84 @@ if "code" in query_params and not current_user_id:
 			st.sidebar.success(f"🎉 歡迎，{user_name}！")
 			st.rerun()
 
-# 3. 如果已經登入，確保 Session 載入該使用者的最新資料
-# 確保每次重新整理時，能自動從網址列恢復 LINE 綁定狀態
-# 1. 強制檢查並從網址列永久還原 user_id（重新整理也不會不見）
-	query_params = st.query_params
-	url_user_id = query_params.get("user_id")
+# 3. 側邊欄 LINE 綁定與通知介面 (改為永遠顯示，不再因重新整理而消失)
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔔 LINE 官方帳號通知綁定")
 
-	if url_user_id:
-		st.session_state["line_user_id"] = url_user_id
-		if "line_user_name" not in st.session_state:
-			user_record = db.get_user_data(url_user_id)
-			if user_record:
-				st.session_state["line_user_name"] = user_record.get("name", "已存取")
-				st.session_state["portfolio"] = {
-				 "cash": float(user_record.get("cash", 100000.0)),
-				 "holdings": user_record.get("holdings", {})
-				}
+current_uid = st.session_state.get("line_user_id", "forced_test_user_id")
 
-	# 2. 側邊欄 LINE 綁定與通知介面
-	st.sidebar.markdown("---")
-	st.sidebar.subheader("🔔 LINE 官方帳號通知綁定")
+if current_uid:
+	st.session_state["line_user_id"] = current_uid
+	display_name = st.session_state.get("line_user_name", "已連結測試帳號")
+	st.sidebar.info(f"✅ 已連結 LINE 帳號：{display_name}")
 
-	# 只要 session 裡面有 line_user_id，或是網址列有帶 user_id，按鈕就會永遠會出現！
-	current_uid = st.session_state.get("line_user_id") or url_user_id or "forced_test_user_id"
+	# 🚀 發送測試通知按鈕
+	if st.sidebar.button("🚀 發送測試通知", use_container_width=True):
+		import notifier
+		import importlib
+		importlib.reload(notifier)
 
-	# 【保底設定】如果因為重新整理抓不到，可以直接把你的 LINE User ID 填在這邊（記得保留引號）
-	current_uid = current_uid or "你的真實LINE_USER_ID"
+		try:
+			result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！", user_id=current_uid)
+			if result is True:
+				st.sidebar.success("測試訊息已發送，請查看 LINE 💬")
+			else:
+				st.sidebar.error(f"發送失敗：{result}")
+		except Exception as e:
+			st.sidebar.error(f"發生例外錯誤：{e}")
 
-	if current_uid:
-		# 確保 session 內也有值
-		st.session_state["line_user_id"] = current_uid
+	# 📊 發送個人持倉戰報至 LINE
+	if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
+		import notifier
+		import importlib
+		importlib.reload(notifier)
 
-		display_name = st.session_state.get("line_user_name", "已存取")
-		st.sidebar.info(f"✅ 已連結 LINE 帳號：{display_name}")
+		try:
+			user_portfolio = st.session_state.get("portfolio", {})
+			active_holdings = user_portfolio.get("holdings", {})
 
-		# 🚀 發送測試通知按鈕
-		if st.sidebar.button("🚀 發送測試通知", use_container_width=True):
-			import notifier
-			import importlib
-			importlib.reload(notifier)
+			if active_holdings:
+				success_count = 0
+				error_messages = []
+				target_user_id = st.session_state.get("line_user_id")
 
-			try:
-				result = notifier.send_line_message("恭喜！台股戰情室系統已成功連結您的 LINE 官方帳號！", user_id=current_uid)
-				if result is True:
-					st.sidebar.success("測試訊息已發送，請查看 LINE 💬")
-				else:
-					st.sidebar.error(f"發送失敗：{result}")
-			except Exception as e:
-				st.sidebar.error(f"發生例外錯誤：{e}")
+				for ticker in active_holdings.keys():
+					df_temp = dd.fetch_stock_data(ticker)
+					if not df_temp.empty:
+						signal, price, desc = dd.calculate_signal(df_temp)
+						raw_info = active_holdings.get(ticker, {})
+						avg_cost = raw_info.get("cost", 0.0) if isinstance(raw_info, dict) else 0.0
 
-		# 📊 發送個人持倉戰報至 LINE
-		if st.sidebar.button("📊 發送個人持倉戰報至 LINE", use_container_width=True):
-			import notifier
-			import importlib
-			importlib.reload(notifier)
+						msg = f"\n🔹 [{ticker}] 即時交易戰報\n◆ 當前股價: ${price:.1f}\n"
+						if avg_cost > 0:
+							pnl = (price - avg_cost) / avg_cost * 100
+							msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
+						msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
 
-			try:
-				user_portfolio = st.session_state.get("portfolio", {})
-				active_holdings = user_portfolio.get("holdings", {})
+						res = notifier.send_line_message(msg, user_id=target_user_id)
+						if res is True:
+							success_count += 1
+						else:
+							error_messages.append(f"{ticker}: {res}")
 
-				if active_holdings:
-					success_count = 0
-					error_messages = []
-					current_user_id = st.session_state.get("line_user_id")
+				if success_count > 0:
+					st.sidebar.success(f"已成功發送 {success_count} 檔持倉戰報！")
+				if error_messages:
+					st.sidebar.error(f"發送失敗原因: {', '.join(error_messages)}")
+			else:
+				st.sidebar.warning("目前沒有持股股票！")
 
-					for ticker in active_holdings.keys():
-						df_temp = dd.fetch_stock_data(ticker)
-						if not df_temp.empty:
-							signal, price, desc = dd.calculate_signal(df_temp)
-							raw_info = active_holdings.get(ticker, {})
-							avg_cost = raw_info.get("cost", 0.0) if isinstance(raw_info, dict) else 0.0
+		except Exception as e:
+			st.sidebar.error(f"發送戰報時發生例外錯誤：{e}")
 
-							msg = f"\n🔹 [{ticker}] 即時交易戰報\n◆ 當前股價: ${price:.1f}\n"
-							if avg_cost > 0:
-								pnl = (price - avg_cost) / avg_cost * 100
-								msg += f"◆ 庫存報酬: {pnl:+.2f}%\n"
-							msg += f"◆ 目前訊號: {signal}\n◆ 狀態: {desc}"
-
-							# 【修正點】明確傳入 user_id，並用 res == True 嚴格檢查是否成功
-							res = notifier.send_line_message(msg, user_id=current_user_id)
-							if res is True:
-								success_count += 1
-							else:
-								error_messages.append(f"{ticker}: {res}")
-
-					if success_count > 0:
-						st.sidebar.success(f"已成功發送 {success_count} 檔持倉戰報！")
-					if error_messages:
-						st.sidebar.error(f"發送失敗原因: {', '.join(error_messages)}")
-				else:
-					st.sidebar.warning("目前沒有持股股票！")
-
-			except Exception as e:
-				st.sidebar.error(f"發送戰報時發生例外錯誤：{e}")
-
-# 🔓 解除綁定 / 登出按鈕
-		if st.sidebar.button("🔓 解除綁定 / 登出", use_container_width=True):
-			if "user_id" in st.query_params:
-				del st.query_params["user_id"]
-			if "code" in st.query_params:
-				del st.query_params["code"]
-			st.session_state.clear()
-			st.rerun()
-
-else:
-	login_url = ("https://access.line.me/oauth2/v2.1/authorize?"
-	             f"response_type=code&client_id={client_id}"
-	             f"&redirect_uri={urllib.parse.quote(redirect_uri)}"
-	             "&state=quant_trading_state&scope=profile%20openid"
-	             "&bot_prompt=normal")
-
-	st.sidebar.markdown(f'''
-        <a href="{login_url}" target="_blank">
-            <button style="background-color:#06C755;color:white;border:none;padding:10px 16px;border-radius:8px;width:100%;font-weight:bold;cursor:pointer;">
-                💬 一鍵加好友綁定 LINE 通知
-            </button>
-        </a>
-    ''',
-	                    unsafe_allow_html=True)
+	# 🔓 解除綁定 / 登出按鈕
+	if st.sidebar.button("🔓 解除綁定 / 登出", use_container_width=True):
+		if "user_id" in st.query_params:
+			del st.query_params["user_id"]
+		if "code" in st.query_params:
+			del st.query_params["code"]
+		st.session_state.clear()
+		st.rerun()
 
 # -------------------------------------------------------------------
 # 🧰 資產與持倉編輯器（優化介面與成本欄位）
