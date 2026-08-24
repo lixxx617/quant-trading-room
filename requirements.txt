@@ -12,3 +12,4 @@ requests
 supabase
 lightgbm
 openpyxl
+scikit-learn
