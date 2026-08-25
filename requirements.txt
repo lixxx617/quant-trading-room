@@ -13,3 +13,4 @@ supabase
 lightgbm
 openpyxl
 scikit-learn
+streamlit-autorefresh
